@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Porvoon NMKY – Historiikki</title>
+  <meta name="theme-color" content="#173B68">
+  <style>
+    :root{
+      --navy:#173B68;
+      --blue:#1689BD;
+      --pale:#EEF3F7;
+      --paper:#fff;
+      --ink:#173B68;
+      --muted:#657485;
+      --shadow:0 12px 34px rgba(16,42,72,.16);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{
+      font-family:Montserrat,Arial,sans-serif;
+      background:var(--pale);
+      color:var(--ink);
+      overflow:hidden;
+    }
+    .app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+    header{
+      min-height:64px;
+      padding:12px 18px;
+      display:flex;align-items:center;justify-content:space-between;gap:16px;
+      background:var(--navy);color:white;
+    }
+    .brand{min-width:0}
+    .brand strong{display:block;font-size:16px;letter-spacing:.04em}
+    .brand span{display:block;font-size:12px;opacity:.78;margin-top:2px}
+    .actions{display:flex;gap:8px;flex-shrink:0}
+    button,a.button{
+      appearance:none;border:0;border-radius:999px;
+      background:var(--blue);color:white;text-decoration:none;
+      min-height:40px;padding:0 15px;
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;
+      font:600 14px/1 Montserrat,Arial,sans-serif;cursor:pointer;
+    }
+    button.secondary,a.button.secondary{background:rgba(255,255,255,.13)}
+    button:focus-visible,a.button:focus-visible{outline:3px solid white;outline-offset:2px}
+    main{
+      min-height:0;
+      display:flex;align-items:center;justify-content:center;
+      padding:22px 72px;
+      position:relative;
+    }
+    .spread{
+      width:100%;height:100%;
+      display:flex;align-items:center;justify-content:center;gap:10px;
+    }
+    .page-wrap{
+      height:100%;max-height:calc(100vh - 155px);
+      aspect-ratio:595.276/841.89;
+      background:var(--paper);
+      box-shadow:var(--shadow);
+      position:relative;overflow:hidden;
+    }
+    canvas{display:block;width:100%;height:100%;object-fit:contain;background:white}
+    .empty{display:none}
+    .nav{
+      position:absolute;top:50%;transform:translateY(-50%);
+      width:48px;height:48px;padding:0;border-radius:50%;
+      box-shadow:0 5px 18px rgba(16,42,72,.18);
+      font-size:27px;
+    }
+    #prev{left:14px}
+    #next{right:14px}
+    footer{
+      min-height:62px;
+      display:flex;align-items:center;justify-content:center;gap:14px;
+      padding:10px 16px;background:white;border-top:1px solid #dce4ea;
+    }
+    #counter{min-width:118px;text-align:center;font-weight:600;font-size:13px}
+    .hint{font-size:12px;color:var(--muted)}
+    .loading{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      color:var(--muted);font-size:14px;pointer-events:none;
+    }
+    @media (max-width:760px){
+      header{min-height:58px;padding:9px 12px}
+      .brand span{display:none}
+      .actions .label{display:none}
+      button,a.button{min-width:40px;padding:0 11px}
+      main{padding:14px 48px}
+      .spread{gap:0}
+      .page-wrap{max-height:calc(100vh - 136px);max-width:100%}
+      .page-wrap.right{display:none}
+      .nav{width:40px;height:40px;font-size:23px}
+      #prev{left:4px} #next{right:4px}
+      footer{min-height:58px}
+      .hint{display:none}
+    }
+    @media (max-height:620px){
+      header{min-height:52px}
+      footer{min-height:50px}
+      main{padding-top:10px;padding-bottom:10px}
+      .page-wrap{max-height:calc(100vh - 122px)}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <strong>PORVOON NMKY</strong>
+      <span>Seuran historiikki</span>
+    </div>
+    <div class="actions">
+      <a class="button secondary" href="historiikki.pdf" target="_blank" rel="noopener" title="Avaa alkuperäinen PDF">
+        <span aria-hidden="true">↗</span><span class="label">PDF</span>
+      </a>
+      <button class="secondary" id="fullscreen" title="Koko näyttö">
+        <span aria-hidden="true">⛶</span><span class="label">Koko näyttö</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="viewer">
+    <button class="nav" id="prev" aria-label="Edellinen aukeama">‹</button>
+    <div class="spread">
+      <div class="page-wrap left"><canvas id="left"></canvas></div>
+      <div class="page-wrap right"><canvas id="right"></canvas></div>
+    </div>
+    <button class="nav" id="next" aria-label="Seuraava aukeama">›</button>
+    <div class="loading" id="loading">Ladataan historiikkia…</div>
+  </main>
+
+  <footer>
+    <span class="hint">← → selaa</span>
+    <div id="counter">Sivu 1 / 8</div>
+  </footer>
+</div>
+
+<script type="module">
+  import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+
+  const pdf = await pdfjsLib.getDocument('historiikki.pdf').promise;
+  const leftCanvas = document.getElementById('left');
+  const rightCanvas = document.getElementById('right');
+  const rightWrap = document.querySelector('.page-wrap.right');
+  const counter = document.getElementById('counter');
+  const loading = document.getElementById('loading');
+  let current = 1;
+  let renderToken = 0;
+
+  const isMobile = () => window.matchMedia('(max-width:760px)').matches;
+
+  async function draw(pageNum, canvas, token){
+    if(pageNum < 1 || pageNum > pdf.numPages){
+      canvas.style.visibility='hidden';
+      return;
+    }
+    canvas.style.visibility='visible';
+    const page = await pdf.getPage(pageNum);
+    if(token !== renderToken) return;
+    const base = page.getViewport({scale:1});
+    const wrap = canvas.parentElement;
+    const cssW = Math.max(1, wrap.clientWidth);
+    const cssH = Math.max(1, wrap.clientHeight);
+    const fit = Math.min(cssW/base.width, cssH/base.height);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const viewport = page.getViewport({scale:fit*dpr});
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+  }
+
+  async function render(){
+    const token = ++renderToken;
+    loading.style.display='flex';
+
+    if(isMobile()){
+      rightWrap.style.display='none';
+      await draw(current,leftCanvas,token);
+      counter.textContent=`Sivu ${current} / ${pdf.numPages}`;
+    } else {
+      rightWrap.style.display='';
+      if(current === 1){
+        await draw(1,leftCanvas,token);
+        rightCanvas.style.visibility='hidden';
+        counter.textContent=`Sivu 1 / ${pdf.numPages}`;
+      } else {
+        if(current % 2 !== 0) current--;
+        const right = current + 1;
+        await Promise.all([
+          draw(current,leftCanvas,token),
+          draw(right,rightCanvas,token)
+        ]);
+        counter.textContent = right <= pdf.numPages
+          ? `Sivut ${current}–${right} / ${pdf.numPages}`
+          : `Sivu ${current} / ${pdf.numPages}`;
+      }
+    }
+    if(token === renderToken) loading.style.display='none';
+  }
+
+  function next(){
+    if(isMobile()){
+      if(current < pdf.numPages) current++;
+    } else {
+      if(current === 1) current=2;
+      else if(current+2 <= pdf.numPages) current+=2;
+    }
+    render();
+  }
+  function prev(){
+    if(isMobile()){
+      if(current > 1) current--;
+    } else {
+      if(current <= 2) current=1;
+      else current-=2;
+    }
+    render();
+  }
+
+  document.getElementById('next').addEventListener('click',next);
+  document.getElementById('prev').addEventListener('click',prev);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight' || e.key==='PageDown'){e.preventDefault();next()}
+    if(e.key==='ArrowLeft' || e.key==='PageUp'){e.preventDefault();prev()}
+  });
+  document.getElementById('fullscreen').addEventListener('click', async ()=>{
+    const el=document.documentElement;
+    if(!document.fullscreenElement) await el.requestFullscreen?.();
+    else await document.exitFullscreen?.();
+  });
+
+  let resizeTimer;
+  window.addEventListener('resize',()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(render,160);
+  });
+
+  await render();
+</script>
+</body>
+</html>
