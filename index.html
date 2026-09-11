@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Porvoon NMKY – Historiikki</title>
+  <title>Porvoon NMKY – Seuran historiikki</title>
   <meta name="theme-color" content="#173B68">
   <style>
     :root{
@@ -14,7 +14,9 @@
       --ink:#173B68;
       --muted:#657485;
       --shadow:0 12px 34px rgba(16,42,72,.16);
+      --page-gap:2px;
     }
+
     *{box-sizing:border-box}
     html,body{height:100%;margin:0}
     body{
@@ -23,219 +25,669 @@
       color:var(--ink);
       overflow:hidden;
     }
-    .app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+
+    .app{
+      height:100%;
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+    }
+
     header{
       min-height:64px;
-      padding:12px 18px;
-      display:flex;align-items:center;justify-content:space-between;gap:16px;
-      background:var(--navy);color:white;
+      padding:10px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      background:var(--navy);
+      color:white;
+      position:relative;
+      z-index:10;
     }
-    .brand{min-width:0}
-    .brand strong{display:block;font-size:16px;letter-spacing:.04em}
-    .brand span{display:block;font-size:12px;opacity:.78;margin-top:2px}
-    .actions{display:flex;gap:8px;flex-shrink:0}
+
+    .brand{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    /* Lisää tiedosto logo.png samaan kansioon index.html:n kanssa.
+       Jos sitä ei ole, logo piilotetaan automaattisesti. */
+    .logo{
+      width:42px;
+      height:42px;
+      object-fit:contain;
+      display:block;
+      flex:0 0 auto;
+    }
+
+    .brand-text{min-width:0}
+    .brand strong{
+      display:block;
+      font-size:16px;
+      letter-spacing:.04em;
+    }
+    .brand span{
+      display:block;
+      font-size:12px;
+      opacity:.78;
+      margin-top:2px;
+    }
+
+    .actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-shrink:0;
+    }
+
     button,a.button{
-      appearance:none;border:0;border-radius:999px;
-      background:var(--blue);color:white;text-decoration:none;
-      min-height:40px;padding:0 15px;
-      display:inline-flex;align-items:center;justify-content:center;gap:7px;
-      font:600 14px/1 Montserrat,Arial,sans-serif;cursor:pointer;
+      appearance:none;
+      border:0;
+      border-radius:999px;
+      background:var(--blue);
+      color:white;
+      text-decoration:none;
+      min-height:40px;
+      padding:0 14px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+      font:600 14px/1 Montserrat,Arial,sans-serif;
+      cursor:pointer;
+      transition:transform .15s ease, background .15s ease;
     }
+
+    button:hover,a.button:hover{transform:translateY(-1px)}
     button.secondary,a.button.secondary{background:rgba(255,255,255,.13)}
+    button:disabled{opacity:.38;cursor:default;transform:none}
     button:focus-visible,a.button:focus-visible{outline:3px solid white;outline-offset:2px}
+
+    .zoom-group{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      background:rgba(255,255,255,.09);
+      border-radius:999px;
+      padding:3px;
+    }
+    .zoom-group button{
+      width:36px;
+      min-width:36px;
+      height:34px;
+      min-height:34px;
+      padding:0;
+      background:transparent;
+      font-size:20px;
+    }
+    #zoomLabel{
+      min-width:46px;
+      text-align:center;
+      font-size:12px;
+      font-weight:700;
+      opacity:.9;
+    }
+
     main{
       min-height:0;
-      display:flex;align-items:center;justify-content:center;
-      padding:22px 72px;
       position:relative;
+      overflow:auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px 70px;
+      scrollbar-width:thin;
     }
+
+    .stage{
+      position:relative;
+      flex:0 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-width:100%;
+      min-height:100%;
+    }
+
     .spread{
-      width:100%;height:100%;
-      display:flex;align-items:center;justify-content:center;gap:10px;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:var(--page-gap);
+      perspective:1800px;
+      transform-style:preserve-3d;
+      flex:0 0 auto;
     }
+
     .page-wrap{
-      height:100%;max-height:calc(100vh - 155px);
-      aspect-ratio:595.276/841.89;
       background:var(--paper);
       box-shadow:var(--shadow);
-      position:relative;overflow:hidden;
+      position:relative;
+      overflow:hidden;
+      flex:0 0 auto;
     }
-    canvas{display:block;width:100%;height:100%;object-fit:contain;background:white}
-    .empty{display:none}
+
+    .page-wrap.right{
+      box-shadow:8px 12px 34px rgba(16,42,72,.14);
+    }
+
+    .spread.two-pages .page-wrap.left::after{
+      content:"";
+      position:absolute;
+      top:0;
+      right:-1px;
+      width:5px;
+      height:100%;
+      pointer-events:none;
+      background:linear-gradient(to left,rgba(0,0,0,.07),rgba(0,0,0,0));
+    }
+
+    .spread.two-pages .page-wrap.right::after{
+      content:"";
+      position:absolute;
+      top:0;
+      left:-1px;
+      width:5px;
+      height:100%;
+      pointer-events:none;
+      background:linear-gradient(to right,rgba(0,0,0,.06),rgba(0,0,0,0));
+    }
+
+    canvas{
+      display:block;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      background:white;
+    }
+
     .nav{
-      position:absolute;top:50%;transform:translateY(-50%);
-      width:48px;height:48px;padding:0;border-radius:50%;
+      position:fixed;
+      top:50%;
+      transform:translateY(-50%);
+      width:48px;
+      height:48px;
+      min-width:48px;
+      padding:0;
+      border-radius:50%;
       box-shadow:0 5px 18px rgba(16,42,72,.18);
       font-size:27px;
+      z-index:20;
     }
     #prev{left:14px}
     #next{right:14px}
+
     footer{
-      min-height:62px;
-      display:flex;align-items:center;justify-content:center;gap:14px;
-      padding:10px 16px;background:white;border-top:1px solid #dce4ea;
+      min-height:58px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      padding:9px 16px;
+      background:white;
+      border-top:1px solid #dce4ea;
+      position:relative;
+      z-index:10;
     }
-    #counter{min-width:118px;text-align:center;font-weight:600;font-size:13px}
-    .hint{font-size:12px;color:var(--muted)}
+
+    #counter{
+      min-width:136px;
+      text-align:center;
+      font-weight:600;
+      font-size:13px;
+    }
+
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+    }
+
     .loading{
-      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-      color:var(--muted);font-size:14px;pointer-events:none;
+      position:fixed;
+      inset:64px 0 58px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--muted);
+      font-size:14px;
+      pointer-events:none;
+      z-index:30;
     }
+
+    /* Sivunkäännön "paperi" */
+    .turn-sheet{
+      position:fixed;
+      z-index:25;
+      background:white;
+      box-shadow:0 10px 35px rgba(13,39,66,.24);
+      backface-visibility:hidden;
+      transform-style:preserve-3d;
+      overflow:hidden;
+      pointer-events:none;
+      will-change:transform;
+    }
+
+    .turn-sheet canvas{
+      width:100%;
+      height:100%;
+    }
+
+    .turn-sheet.forward{
+      transform-origin:left center;
+      animation:turnForward .52s cubic-bezier(.44,.04,.18,1) forwards;
+    }
+
+    .turn-sheet.backward{
+      transform-origin:right center;
+      animation:turnBackward .52s cubic-bezier(.44,.04,.18,1) forwards;
+    }
+
+    @keyframes turnForward{
+      0%{
+        transform:perspective(1800px) rotateY(0deg);
+        filter:brightness(1);
+      }
+      45%{
+        filter:brightness(.92);
+      }
+      100%{
+        transform:perspective(1800px) rotateY(-178deg);
+        filter:brightness(.82);
+      }
+    }
+
+    @keyframes turnBackward{
+      0%{
+        transform:perspective(1800px) rotateY(0deg);
+        filter:brightness(1);
+      }
+      45%{
+        filter:brightness(.92);
+      }
+      100%{
+        transform:perspective(1800px) rotateY(178deg);
+        filter:brightness(.82);
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      .turn-sheet.forward,.turn-sheet.backward{animation:none}
+    }
+
     @media (max-width:760px){
-      header{min-height:58px;padding:9px 12px}
+      header{min-height:58px;padding:8px 10px}
+      .logo{width:36px;height:36px}
+      .brand strong{font-size:14px}
       .brand span{display:none}
       .actions .label{display:none}
-      button,a.button{min-width:40px;padding:0 11px}
-      main{padding:14px 48px}
-      .spread{gap:0}
-      .page-wrap{max-height:calc(100vh - 136px);max-width:100%}
-      .page-wrap.right{display:none}
-      .nav{width:40px;height:40px;font-size:23px}
-      #prev{left:4px} #next{right:4px}
-      footer{min-height:58px}
+      button,a.button{min-width:38px;padding:0 10px}
+      .zoom-group{display:none}
+      main{padding:12px 47px}
+      .nav{width:40px;height:40px;min-width:40px;font-size:23px}
+      #prev{left:4px}
+      #next{right:4px}
+      footer{min-height:54px}
       .hint{display:none}
+      .loading{inset:58px 0 54px}
     }
+
     @media (max-height:620px){
       header{min-height:52px}
-      footer{min-height:50px}
-      main{padding-top:10px;padding-bottom:10px}
-      .page-wrap{max-height:calc(100vh - 122px)}
+      footer{min-height:48px}
+      main{padding-top:8px;padding-bottom:8px}
+      .loading{inset:52px 0 48px}
     }
   </style>
 </head>
 <body>
 <div class="app">
+
   <header>
     <div class="brand">
-      <strong>PORVOON NMKY</strong>
-      <span>Seuran historiikki</span>
+      <img
+        src="logo.png"
+        alt="Porvoon NMKY"
+        class="logo"
+        id="clubLogo"
+        onerror="this.style.display='none'">
+      <div class="brand-text">
+        <strong>PoNMKY</strong>
+        <span>Seuran historiikki</span>
+      </div>
     </div>
+
     <div class="actions">
+      <div class="zoom-group" aria-label="Zoomaus">
+        <button id="zoomOut" type="button" title="Pienennä" aria-label="Pienennä">−</button>
+        <span id="zoomLabel">100 %</span>
+        <button id="zoomIn" type="button" title="Suurenna" aria-label="Suurenna">+</button>
+      </div>
+
       <a class="button secondary" href="historiikki.pdf" target="_blank" rel="noopener" title="Avaa alkuperäinen PDF">
         <span aria-hidden="true">↗</span><span class="label">PDF</span>
       </a>
-      <button class="secondary" id="fullscreen" title="Koko näyttö">
+
+      <button class="secondary" id="fullscreen" type="button" title="Koko näyttö">
         <span aria-hidden="true">⛶</span><span class="label">Koko näyttö</span>
       </button>
     </div>
   </header>
 
   <main id="viewer">
-    <button class="nav" id="prev" aria-label="Edellinen aukeama">‹</button>
-    <div class="spread">
-      <div class="page-wrap left"><canvas id="left"></canvas></div>
-      <div class="page-wrap right"><canvas id="right"></canvas></div>
+    <button class="nav" id="prev" type="button" aria-label="Edellinen sivu tai aukeama">‹</button>
+
+    <div class="stage" id="stage">
+      <div class="spread" id="spread">
+        <div class="page-wrap left" id="leftWrap"><canvas id="left"></canvas></div>
+        <div class="page-wrap right" id="rightWrap"><canvas id="right"></canvas></div>
+      </div>
     </div>
-    <button class="nav" id="next" aria-label="Seuraava aukeama">›</button>
+
+    <button class="nav" id="next" type="button" aria-label="Seuraava sivu tai aukeama">›</button>
     <div class="loading" id="loading">Ladataan historiikkia…</div>
   </main>
 
   <footer>
     <span class="hint">← → selaa</span>
-    <div id="counter">Sivu 1 / 8</div>
+    <div id="counter">Sivu 1</div>
   </footer>
 </div>
 
 <script type="module">
   import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
+
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 
   const pdf = await pdfjsLib.getDocument('historiikki.pdf').promise;
+
+  const viewer = document.getElementById('viewer');
+  const spread = document.getElementById('spread');
+  const leftWrap = document.getElementById('leftWrap');
+  const rightWrap = document.getElementById('rightWrap');
   const leftCanvas = document.getElementById('left');
   const rightCanvas = document.getElementById('right');
-  const rightWrap = document.querySelector('.page-wrap.right');
   const counter = document.getElementById('counter');
   const loading = document.getElementById('loading');
+
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomLabel = document.getElementById('zoomLabel');
+
   let current = 1;
+  let zoom = 1;
   let renderToken = 0;
+  let busy = false;
+
+  const PAGE_RATIO = 595.276 / 841.89;
+  const GAP = 2;
 
   const isMobile = () => window.matchMedia('(max-width:760px)').matches;
+
+  function isSingleDesktopPage(){
+    return !isMobile() && (current === 1 || current === pdf.numPages);
+  }
+
+  function visiblePages(){
+    if(isMobile()) return [current];
+
+    if(current === 1) return [1];
+    if(current === pdf.numPages) return [pdf.numPages];
+
+    const left = current % 2 === 0 ? current : current - 1;
+    return [left, left + 1];
+  }
+
+  function fitDimensions(){
+    const pages = visiblePages();
+    const single = pages.length === 1;
+
+    // jätetään hieman hengitystilaa nuolille ja ylä-/alareunalle
+    const availableW = Math.max(260, viewer.clientWidth - 150);
+    const availableH = Math.max(260, viewer.clientHeight - 30);
+
+    let baseH;
+
+    if(single){
+      baseH = Math.min(
+        availableH,
+        availableW / PAGE_RATIO
+      );
+    }else{
+      baseH = Math.min(
+        availableH,
+        (availableW - GAP) / (PAGE_RATIO * 2)
+      );
+    }
+
+    const h = Math.round(baseH * zoom);
+    const w = Math.round(h * PAGE_RATIO);
+
+    return {w,h,single};
+  }
+
+  function applyLayout(){
+    const {w,h,single} = fitDimensions();
+
+    leftWrap.style.width = `${w}px`;
+    leftWrap.style.height = `${h}px`;
+
+    rightWrap.style.width = `${w}px`;
+    rightWrap.style.height = `${h}px`;
+
+    if(single){
+      rightWrap.style.display = 'none';
+      spread.classList.remove('two-pages');
+    }else{
+      rightWrap.style.display = '';
+      spread.classList.add('two-pages');
+    }
+
+    zoomLabel.textContent = `${Math.round(zoom*100)} %`;
+  }
 
   async function draw(pageNum, canvas, token){
     if(pageNum < 1 || pageNum > pdf.numPages){
       canvas.style.visibility='hidden';
       return;
     }
+
     canvas.style.visibility='visible';
+
     const page = await pdf.getPage(pageNum);
     if(token !== renderToken) return;
+
     const base = page.getViewport({scale:1});
     const wrap = canvas.parentElement;
-    const cssW = Math.max(1, wrap.clientWidth);
-    const cssH = Math.max(1, wrap.clientHeight);
-    const fit = Math.min(cssW/base.width, cssH/base.height);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const fit = Math.min(
+      wrap.clientWidth / base.width,
+      wrap.clientHeight / base.height
+    );
+
     const viewport = page.getViewport({scale:fit*dpr});
+
     canvas.width = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);
-    await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+
+    await page.render({
+      canvasContext:canvas.getContext('2d'),
+      viewport
+    }).promise;
+  }
+
+  function updateButtons(){
+    prevBtn.disabled = current <= 1;
+    nextBtn.disabled = current >= pdf.numPages;
+    zoomOutBtn.disabled = zoom <= .75;
+    zoomInBtn.disabled = zoom >= 2;
   }
 
   async function render(){
     const token = ++renderToken;
     loading.style.display='flex';
 
+    applyLayout();
+
+    const pages = visiblePages();
+
+    if(pages.length === 1){
+      await draw(pages[0], leftCanvas, token);
+      rightCanvas.style.visibility='hidden';
+      counter.textContent = `Sivu ${pages[0]} / ${pdf.numPages}`;
+    }else{
+      await Promise.all([
+        draw(pages[0], leftCanvas, token),
+        draw(pages[1], rightCanvas, token)
+      ]);
+      counter.textContent = `Sivut ${pages[0]}–${pages[1]} / ${pdf.numPages}`;
+    }
+
+    updateButtons();
+
+    if(token === renderToken){
+      loading.style.display='none';
+    }
+  }
+
+  function copyCanvas(source){
+    const c = document.createElement('canvas');
+    c.width = source.width;
+    c.height = source.height;
+    c.getContext('2d').drawImage(source,0,0);
+    return c;
+  }
+
+  function makeTurnSheet(direction){
+    if(window.matchMedia('(prefers-reduced-motion:reduce)').matches) return null;
+
+    const pages = visiblePages();
+    let sourceCanvas;
+    let sourceWrap;
+
+    if(direction === 'forward'){
+      // kannesta eteenpäin käytetään kansisivua, muuten oikeaa sivua
+      if(pages.length === 1){
+        sourceCanvas = leftCanvas;
+        sourceWrap = leftWrap;
+      }else{
+        sourceCanvas = rightCanvas;
+        sourceWrap = rightWrap;
+      }
+    }else{
+      // taaksepäin: yhden sivun tapauksessa vasen, muuten vasen sivu
+      sourceCanvas = leftCanvas;
+      sourceWrap = leftWrap;
+    }
+
+    const rect = sourceWrap.getBoundingClientRect();
+    const sheet = document.createElement('div');
+    sheet.className = `turn-sheet ${direction}`;
+    sheet.style.left = `${rect.left}px`;
+    sheet.style.top = `${rect.top}px`;
+    sheet.style.width = `${rect.width}px`;
+    sheet.style.height = `${rect.height}px`;
+
+    const cloned = copyCanvas(sourceCanvas);
+    sheet.appendChild(cloned);
+    document.body.appendChild(sheet);
+
+    return sheet;
+  }
+
+  async function go(direction){
+    if(busy) return;
+
+    const canGo =
+      direction === 'forward'
+        ? current < pdf.numPages
+        : current > 1;
+
+    if(!canGo) return;
+
+    busy = true;
+
+    const sheet = makeTurnSheet(direction);
+
+    // vaihda sivut puolivälissä animaatiota,
+    // jolloin uusi aukeama näkyy "kääntyvän sivun alta"
+    await new Promise(r => setTimeout(r, 230));
+
     if(isMobile()){
-      rightWrap.style.display='none';
-      await draw(current,leftCanvas,token);
-      counter.textContent=`Sivu ${current} / ${pdf.numPages}`;
-    } else {
-      rightWrap.style.display='';
-      if(current === 1){
-        await draw(1,leftCanvas,token);
-        rightCanvas.style.visibility='hidden';
-        counter.textContent=`Sivu 1 / ${pdf.numPages}`;
-      } else {
-        if(current % 2 !== 0) current--;
-        const right = current + 1;
-        await Promise.all([
-          draw(current,leftCanvas,token),
-          draw(right,rightCanvas,token)
-        ]);
-        counter.textContent = right <= pdf.numPages
-          ? `Sivut ${current}–${right} / ${pdf.numPages}`
-          : `Sivu ${current} / ${pdf.numPages}`;
+      current += direction === 'forward' ? 1 : -1;
+    }else{
+      if(direction === 'forward'){
+        if(current === 1){
+          current = 2;
+        }else if(current < pdf.numPages - 1){
+          current += 2;
+        }else{
+          current = pdf.numPages;
+        }
+      }else{
+        if(current === pdf.numPages){
+          current = Math.max(2, pdf.numPages - 2);
+        }else if(current <= 2){
+          current = 1;
+        }else{
+          current -= 2;
+        }
       }
     }
-    if(token === renderToken) loading.style.display='none';
+
+    await render();
+
+    if(sheet){
+      await new Promise(r => setTimeout(r, 320));
+      sheet.remove();
+    }
+
+    busy = false;
   }
 
-  function next(){
-    if(isMobile()){
-      if(current < pdf.numPages) current++;
-    } else {
-      if(current === 1) current=2;
-      else if(current+2 <= pdf.numPages) current+=2;
-    }
-    render();
-  }
-  function prev(){
-    if(isMobile()){
-      if(current > 1) current--;
-    } else {
-      if(current <= 2) current=1;
-      else current-=2;
-    }
-    render();
-  }
+  nextBtn.addEventListener('click',()=>go('forward'));
+  prevBtn.addEventListener('click',()=>go('backward'));
 
-  document.getElementById('next').addEventListener('click',next);
-  document.getElementById('prev').addEventListener('click',prev);
   document.addEventListener('keydown',e=>{
-    if(e.key==='ArrowRight' || e.key==='PageDown'){e.preventDefault();next()}
-    if(e.key==='ArrowLeft' || e.key==='PageUp'){e.preventDefault();prev()}
+    if(e.key==='ArrowRight' || e.key==='PageDown'){
+      e.preventDefault();
+      go('forward');
+    }
+    if(e.key==='ArrowLeft' || e.key==='PageUp'){
+      e.preventDefault();
+      go('backward');
+    }
   });
+
+  zoomInBtn.addEventListener('click',()=>{
+    zoom = Math.min(2, +(zoom + .25).toFixed(2));
+    render();
+  });
+
+  zoomOutBtn.addEventListener('click',()=>{
+    zoom = Math.max(.75, +(zoom - .25).toFixed(2));
+    render();
+  });
+
   document.getElementById('fullscreen').addEventListener('click', async ()=>{
-    const el=document.documentElement;
-    if(!document.fullscreenElement) await el.requestFullscreen?.();
-    else await document.exitFullscreen?.();
+    if(!document.fullscreenElement){
+      await document.documentElement.requestFullscreen?.();
+    }else{
+      await document.exitFullscreen?.();
+    }
   });
 
   let resizeTimer;
   window.addEventListener('resize',()=>{
     clearTimeout(resizeTimer);
-    resizeTimer=setTimeout(render,160);
+    resizeTimer=setTimeout(render,180);
   });
 
   await render();
